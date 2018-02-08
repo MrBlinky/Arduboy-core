@@ -44,6 +44,7 @@ static   unsigned char timer0_fract = 0;
 volatile unsigned char button_ticks_hold = 0;
 volatile unsigned char button_ticks_now  = 0;
 volatile unsigned char button_ticks_last = 0;
+volatile unsigned char bootloader_timer  = 0;
 
 #if defined(__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__)
 ISR(TIM0_OVF_vect)  
@@ -162,6 +163,7 @@ ISR(TIMER0_OVF_vect, ISR_NAKED)
 #else      
       "    subi r24, 0xAC - 0x77        \n\t" //get bootloader key or reset key value
 #endif  
+      "4:                               \n\t"
       "    sts	0x800, r24              \n\t" 
       "    sts	0x801, r24              \n\t" 
       "    ldi	r24, %[value1]          \n\t" 
@@ -172,6 +174,13 @@ ISR(TIMER0_OVF_vect, ISR_NAKED)
       "5:                               \n\t"
       "    sts  %[hold], r25            \n\t" //button_ticks_hold = (uint8_t)(Millis >> 8)
       "6:                               \n\t"
+      "    lds  r24, %[btimer]          \n\t" //if (bootloader_timer--) {
+      "    subi r24, 1                  \n\t" 
+      "    brcs 7f                      \n\t"
+      "    sts  %[btimer],r24           \n\t"
+      "    ldi  r24, 0x77               \n\t"
+      "    breq 4b                      \n\t" // if (bootloader_timer == 0) runBootLoader;
+      "7:                               \n\t" //}
       :
       : [pinf]      "I" (_SFR_IO_ADDR(PINF)),
         [pine]      "I" (_SFR_IO_ADDR(PINE)),
@@ -179,6 +188,7 @@ ISR(TIMER0_OVF_vect, ISR_NAKED)
         [pinb]      "I" (_SFR_IO_ADDR(PINB)),
         [hold]      ""  (&button_ticks_hold),
         [apd]       ""  (&button_ticks_last),
+        [btimer]    ""  (&bootloader_timer),
         [value1]    "M" ((uint8_t)(_BV(WDCE) | _BV(WDE))),
         [value2]    "M" ((uint8_t)(_BV(WDE))),                         
         [wdtcsr]    "M" (_SFR_MEM_ADDR(WDTCSR))

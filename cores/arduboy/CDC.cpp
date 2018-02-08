@@ -34,7 +34,11 @@ typedef struct
 static volatile LineInfo _usbLineInfo = { 57600, 0x00, 0x00, 0x00, 0x00 };
 static volatile int32_t breakValue = -1;
 
+#ifndef ARDUBOY_CORE
 bool _updatedLUFAbootloader = false;
+#else
+extern volatile unsigned char bootloader_timer;
+#endif
 
 #define WEAK __attribute__ ((weak))
 
@@ -100,37 +104,42 @@ bool CDC_Setup(USBSetup& setup)
 			// open at 1200 bps, is closed.  this is the signal to start the watchdog
 			// with a relatively long period so it can finish housekeeping tasks
 			// like servicing endpoints before the sketch ends
-
+#ifndef ARDUBOY_CORE
 			uint16_t magic_key_pos = MAGIC_KEY_POS;
 
 // If we don't use the new RAMEND directly, check manually if we have a newer bootloader.
 // This is used to keep compatible with the old leonardo bootloaders.
 // You are still able to set the magic key position manually to RAMEND-1 to save a few bytes for this check.
-#if MAGIC_KEY_POS != (RAMEND-1)
+	#if MAGIC_KEY_POS != (RAMEND-1)
 			// For future boards save the key in the inproblematic RAMEND
 			// Which is reserved for the main() return value (which will never return)
 			if (_updatedLUFAbootloader) {
 				// horray, we got a new bootloader!
 				magic_key_pos = (RAMEND-1);
 			}
+	#endif
 #endif
-
 			// We check DTR state to determine if host port is open (bit 0 of lineState).
 			if (1200 == _usbLineInfo.dwDTERate && (_usbLineInfo.lineState & 0x01) == 0)
 			{
-#if MAGIC_KEY_POS != (RAMEND-1)
+#ifndef ARDUBOY_CORE
+	#if MAGIC_KEY_POS != (RAMEND-1)
 				// Backup ram value if its not a newer bootloader.
 				// This should avoid memory corruption at least a bit, not fully
 				if (magic_key_pos != (RAMEND-1)) {
 					*(uint16_t *)(RAMEND-1) = *(uint16_t *)magic_key_pos;
 				}
-#endif
+	#endif
 				// Store boot key
 				*(uint16_t *)magic_key_pos = MAGIC_KEY;
 				wdt_enable(WDTO_120MS);
+#else
+				bootloader_timer = 120; //ms 
+#endif            
 			}
 			else
 			{
+#ifndef ARDUBOY_CORE
 				// Most OSs do some intermediate steps when configuring ports and DTR can
 				// twiggle more than once before stabilizing.
 				// To avoid spurious resets we set the watchdog to 250ms and eventually
@@ -138,16 +147,19 @@ bool CDC_Setup(USBSetup& setup)
 
 				wdt_disable();
 				wdt_reset();
-#if MAGIC_KEY_POS != (RAMEND-1)
+	#if MAGIC_KEY_POS != (RAMEND-1)
 				// Restore backed up (old bootloader) magic key data
 				if (magic_key_pos != (RAMEND-1)) {
 					*(uint16_t *)magic_key_pos = *(uint16_t *)(RAMEND-1);
 				} else
-#endif
+	#endif
 				{
 				// Clean up RAMEND key
 					*(uint16_t *)magic_key_pos = 0x0000;
 				}
+#else
+				bootloader_timer = 0;
+#endif            
 			}
 		}
 		return true;
