@@ -121,51 +121,33 @@ ISR(TIMER0_OVF_vect, ISR_NAKED)
     );
     //Arduboy bootloader and reset button feature
     asm volatile (
-#ifdef     AB_DEVKIT
-      "    in	r24, %[pinb]            \n\t" // down, left, up buttons
-      "    com  r24                     \n\t" 
-      "    andi r24, 0x70               \n\t" 
-      "    sbis %[pinc], 6	            \n\t" // right button
-      "    ori	r24, 0x04	            \n\t" 
-      "    sbis %[pinf], 7	            \n\t" // A button
-      "    ori	r24, 0x02	            \n\t" 
-      "    sbis %[pinf], 6	            \n\t" // B button
-      "    ori	r24, 0x01	            \n\t" 
+      "    rcall scan_buttons           \n\t" 
       "    cpse r24, r1                 \n\t" //if (buttons) button_ticks_last = (uint8_t)(Millis >> 12)
       "    sts  %[apd], r16             \n\t" 
+#ifdef     AB_DEVKIT  
       "    cpi	r24, 0x33	            \n\t" // test LEFT+UP+A+B for bootloader
-      "    breq 3f                      \n\t" 
+      "    breq 2f                      \n\t" 
       "    cpi  r24, 0x47               \n\t" // test RIGHT+DOWN+A+B for reset sketch
       "    brne 5f                      \n\t" 
 #else
-      "    in	r24, %[pinf]            \n\t" // directional buttons
-      "    com  r24                     \n\t" 
-      "    andi r24, 0xF0               \n\t" 
-      "    sbis %[pine], 6	            \n\t" // A button
-      "    ori	r24, 0x08	            \n\t" 
-      "    sbis %[pinb], 4	            \n\t" // B button
-      "    ori	r24, 0x04	            \n\t" 
-      "    cpse r24, r1                 \n\t" //if (buttons) button_ticks_last = (uint8_t)(Millis >> 12)
-      "    sts  %[apd], r16             \n\t" 
       "    cpi	r24, 0xAC	            \n\t" // test LEFT+UP+A+B for bootloader
-      "    breq 3f                      \n\t" 
+      "    breq 2f                      \n\t" 
       "    cpi  r24, 0x5C               \n\t" // test RIGHT+DOWN+A+B for reset sketch
       "    brne 5f                      \n\t" 
 #endif      
-      "3:                               \n\t" 
-      "    lds  r16, %[hold]            \n\t" 
+      "2:  lds  r16, %[hold]            \n\t" 
       "    sub  r25, r16                \n\t" // (uint8_t)(timer0_millis >> 8) - button_ticks_last
       "    cpi  r25, 8                  \n\t" 
       "    brcs 6f                      \n\t" // if ((millis - hold) < 8)
-      "                                 \n\t" 
 #ifdef     AB_DEVKIT  
       "    subi r24, 0x33 - 0x77        \n\t" //get bootloader key or reset key value
 #else      
       "    subi r24, 0xAC - 0x77        \n\t" //get bootloader key or reset key value
 #endif  
-      "4:                               \n\t"
-      "    sts	0x800, r24              \n\t" 
+      "3:  sts	0x800, r24              \n\t" 
       "    sts	0x801, r24              \n\t" 
+      "4:  rcall scan_buttons           \n\t" //wait for buttons to be released
+      "    brne 4b                      \n\t" 
       "    ldi	r24, %[value1]          \n\t" 
       "    ldi	r25, %[value2]          \n\t" 
       "    sts   %[wdtcsr], r24         \n\t" 
@@ -179,14 +161,10 @@ ISR(TIMER0_OVF_vect, ISR_NAKED)
       "    brcs 7f                      \n\t"
       "    sts  %[btimer],r24           \n\t"
       "    ldi  r24, 0x77               \n\t"
-      "    breq 4b                      \n\t" // if (bootloader_timer == 0) runBootLoader;
+      "    breq 3b                      \n\t" // if (bootloader_timer == 0) runBootLoader;
       "7:                               \n\t" //}
       :
-      : [pinf]      "I" (_SFR_IO_ADDR(PINF)),
-        [pine]      "I" (_SFR_IO_ADDR(PINE)),
-        [pinc]      "I" (_SFR_IO_ADDR(PINC)),
-        [pinb]      "I" (_SFR_IO_ADDR(PINB)),
-        [hold]      ""  (&button_ticks_hold),
+      : [hold]      ""  (&button_ticks_hold),
         [apd]       ""  (&button_ticks_last),
         [btimer]    ""  (&bootloader_timer),
         [value1]    "M" ((uint8_t)(_BV(WDCE) | _BV(WDE))),
@@ -221,6 +199,33 @@ ISR(TIMER0_OVF_vect, ISR_NAKED)
       "    out  __SREG__, r16           \n\t"
       "    pop  r16                     \n\t"
       "    reti                         \n\t"
+      ".global scan_buttons             \n\t"
+      "scan_buttons:                    \n\t"
+#ifdef     AB_DEVKIT
+      "    in	r24, %[pinb]            \n\t" // down, left, up buttons
+      "    com  r24                     \n\t" 
+      "    andi r24, 0x70               \n\t" 
+      "    sbis %[pinc], 6	            \n\t" // right button
+      "    ori	r24, 0x04	            \n\t" 
+      "    sbis %[pinf], 7	            \n\t" // A button
+      "    ori	r24, 0x02	            \n\t" 
+      "    sbis %[pinf], 6	            \n\t" // B button
+      "    ori	r24, 0x01	            \n\t" 
+#else      
+      "    in	r24, %[pinf]            \n\t" // directional buttons
+      "    com  r24                     \n\t" 
+      "    andi r24, 0xF0               \n\t" 
+      "    sbis %[pine], 6	            \n\t" // A button
+      "    ori	r24, 0x08	            \n\t" 
+      "    sbis %[pinb], 4	            \n\t" // B button
+      "    ori	r24, 0x04	            \n\t" 
+#endif      
+      "    ret          	            \n\t" // Z flag set from AND when no button is pressed
+      :
+      : [pinf]      "I" (_SFR_IO_ADDR(PINF)),
+        [pine]      "I" (_SFR_IO_ADDR(PINE)),
+        [pinc]      "I" (_SFR_IO_ADDR(PINC)),
+        [pinb]      "I" (_SFR_IO_ADDR(PINB))
     );
 }
 
