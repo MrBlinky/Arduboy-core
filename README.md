@@ -14,3 +14,5 @@ Returns the least significant byte of **millis()**
 ### void delayShort(unsigned short ms)
 Same as **delay()** but but takes an unsigned short (16-bit) value instead of an unsigned long (32-bit value). All occurances of **delay()** in the core are replaced by **delayShort()** Use of **Delay()** is depreciated as it will increase the sketches code size.
 
+## Usage
+This core is part of the **Arduboy Homebrew package**. When this package is not installed, the **Arduboy-core** folder can be copied to your sketch or  sketchbook folder.
