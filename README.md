@@ -1,9 +1,10 @@
 # Arduboy-core
 An optimized Arduino core for Arduboy
 
-* Heavily assembly optimized wiring.h and other optimisation to other core files.
-* Added soft bootloader and reset feature by pressing a button combination for 2 seconds. (Bootloader: LEFT+UP+A+B, Reset: DOWN+RIGHT+A+B)
-* Added new functions:
+* Heavily assembly optimized wiring.h and other optimisation to other core files to reduce code size.
+* Added soft bootloader and reset button feature. (Bootloader: Press LEFT+UP+A+B for two seconds, Reset: Press DOWN+RIGHT+A+B for two seconds)
+* Fixes the bootloader magic number problem.
+* New functions:
 ### unsigned char buttonsIdleTime()
 Returns the time passed since the last button was released in 4.096 second units (ms/4096)
 
