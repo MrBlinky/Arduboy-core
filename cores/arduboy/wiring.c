@@ -593,18 +593,7 @@ void init() //assembly optimized by 68 bytes
 #if defined(TIMSK) && defined(TOIE0)
     sbi(TIMSK, TOIE0);
 #elif defined(TIMSK0) && defined(TOIE0)
-    //sbi(TIMSK0, TOIE0);
-    asm volatile(
-      "    ldi  r30, %[timsk0]          \n\t"          
-      "    ldi  r31, 0x00               \n\t"          
-      "    ld   r24, z                  \n\t"          
-      "    ori  r24, %[toie0]           \n\t"          
-      "    st   z, r24                  \n\t"          
-      :
-      : [timsk0] "M" (_SFR_MEM_ADDR(TIMSK0)),
-        [toie0]  "M" (_BV(TOIE0))
-      : "r24", "r30", "r31"
-    );
+    TIMSK0 = _BV(TOIE0);
 #else
     #error  Timer 0 overflow interrupt not set correctly
 #endif
@@ -621,6 +610,7 @@ void init() //assembly optimized by 68 bytes
     //sbi(TCCR1B, CS11);
     asm volatile(
       "    ldi  r30, %[tccr1b]          \n\t"          
+      "    ldi  r31, 0x00               \n\t"          
       "    st   z, r1                   \n\t"          
       "    ldi  r24, %[cs11]            \n\t"          
       "    st   z, r24                  \n\t"          
