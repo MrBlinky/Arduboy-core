@@ -144,8 +144,8 @@ int analogRead(uint8_t);
 void analogReference(uint8_t mode);
 void analogWrite(uint8_t, int);
 
-unsigned char buttonsIdleTime();
-unsigned char millisChar();
+unsigned char buttonsIdleTime(void);
+unsigned char millisChar(void);
 unsigned long millis(void);
 unsigned long micros(void);
 void delay(unsigned long);

@@ -136,7 +136,7 @@ bool CDC_Setup(USBSetup& setup)
 				wdt_enable(WDTO_120MS);
 #else
 				bootloader_timer = 120; //ms 
-                power_timer0_enable(); //power timer0 is disabled by flashlight/safemode in older Arduboy2 libraries
+				power_timer0_enable(); //power timer0 is disabled by flashlight/safemode in older Arduboy2 libraries
 #endif            
 			}
 			else
